@@ -60,7 +60,7 @@ jobs:
           rm -f .github/workflows/add-california-bitcoin.yml
           git config user.name 'California Bitcoin Directory Bot'
           git config user.email 'hello@davisvillelabs.com'
-          git add schemas/services.ts schemas/discovery.json public/services/catalog.json public/services/llms.txt .github/workflows/add-california-bitcoin.yml
+          git add schemas/services.ts .github/workflows/add-california-bitcoin.yml
           if ! git diff --cached --quiet; then
             git commit -m 'Add California Bitcoin to MPP service directory'
             git push origin HEAD:add-california-bitcoin
