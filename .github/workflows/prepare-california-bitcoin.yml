@@ -1,0 +1,67 @@
+name: Prepare California Bitcoin listing
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/prepare-california-bitcoin.yml
+
+permissions:
+  contents: write
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: add-california-bitcoin
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Add California Bitcoin service
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('schemas/services.ts')
+          text = p.read_text()
+          if 'id: "california-bitcoin"' not in text:
+              marker = 'export const services: ServiceDef[] = [\n'
+              block = '''  // ── California Bitcoin ───────────────────────────────────────────────\n  {\n    id: "california-bitcoin",\n    name: "California Bitcoin",\n    url: "https://californiabitcoin.org",\n    serviceUrl: "https://californiabitcoin.org",\n    description:\n      "Source-backed Bitcoin research, claim verification, evidence packs, timelines, and deterministic grounding for AI agents.",\n    icon: "https://californiabitcoin.org/assets/favicon-512.png",\n    categories: ["blockchain", "data", "search"],\n    integration: "first-party",\n    tags: [\n      "bitcoin",\n      "research",\n      "verification",\n      "evidence",\n      "timelines",\n      "mcp",\n    ],\n    status: "active",\n    docs: {\n      homepage: "https://californiabitcoin.org/developers/",\n      llmsTxt: "https://californiabitcoin.org/llms.txt",\n      apiReference: "https://californiabitcoin.org/openapi.json",\n    },\n    provider: { name: "California Bitcoin", url: "https://californiabitcoin.org" },\n    realm: "californiabitcoin.org",\n    intent: "charge",\n    payments: [STRIPE_PAYMENT],\n    endpoints: [\n      { route: "GET /api/agent/v1", desc: "Discover Agent Commerce capabilities and pricing" },\n      { route: "GET /api/agent/v1/search", desc: "Search canonical Bitcoin knowledge" },\n      { route: "GET /api/agent/v1/topic/:id", desc: "Retrieve one canonical Bitcoin knowledge topic" },\n      { route: "POST /api/agent/v1/answer", desc: "Answer a Bitcoin question deterministically" },\n      { route: "POST /api/agent/v1/verify-claim", desc: "Verify a Bitcoin claim against maintained source-backed knowledge", amount: "50", unitType: "request" },\n      { route: "POST /api/agent/v1/evidence-pack", desc: "Build a structured Bitcoin evidence pack", amount: "50", unitType: "request" },\n      { route: "POST /api/agent/v1/timeline", desc: "Build a query-specific sourced Bitcoin timeline", amount: "50", unitType: "request" },\n      { route: "POST /api/agent/v1/deep-ground", desc: "Build a deep deterministic Bitcoin grounding package", amount: "100", unitType: "request" },\n      { route: "POST /api/agent/v1/batch", desc: "Process up to 20 Bitcoin claims or questions", amount: "250", unitType: "request" },\n    ],\n  },\n\n'''
+              if marker not in text:
+                  raise SystemExit('services array marker not found')
+              p.write_text(text.replace(marker, marker + block, 1))
+          PY
+
+      - name: Install dependencies
+        run: |
+          corepack enable
+          pnpm install --frozen-lockfile
+
+      - name: Generate discovery artifacts
+        run: pnpm generate:discovery
+
+      - name: Type check
+        run: pnpm check:types
+
+      - name: Build
+        run: pnpm build
+
+      - name: Commit validated listing
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f .github/workflows/add-california-bitcoin.yml
+          git config user.name 'California Bitcoin Directory Bot'
+          git config user.email 'hello@davisvillelabs.com'
+          git add schemas/services.ts schemas/discovery.json public/services/catalog.json public/services/llms.txt .github/workflows/add-california-bitcoin.yml
+          if ! git diff --cached --quiet; then
+            git commit -m 'Add California Bitcoin to MPP service directory'
+            git push origin HEAD:add-california-bitcoin
+          fi
