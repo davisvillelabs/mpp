@@ -1,0 +1,203 @@
+name: Davisville MPP service listings
+
+on:
+  push:
+    branches:
+      - mpp-listing-automation
+
+permissions:
+  contents: write
+
+jobs:
+  prepare-listing:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - service: california-bitcoin
+            branch: add-california-bitcoin
+            commit_message: Refresh California Bitcoin MPP service listing
+          - service: filedproof
+            branch: add-filedproof
+            commit_message: Add FiledProof MPP service listing
+          - service: filmrightsproof
+            branch: add-filmrightsproof
+            commit_message: Add FilmRightsProof MPP service listing
+
+    steps:
+      - name: Check out fork
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Enable pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@10.22.0 --activate
+
+      - name: Start from current Tempo main
+        env:
+          BRANCH: ${{ matrix.branch }}
+        run: |
+          git remote add upstream https://github.com/tempoxyz/mpp.git 2>/dev/null || true
+          git fetch upstream main
+          git checkout -B "$BRANCH" upstream/main
+
+      - name: Add Davisville service definition
+        env:
+          SERVICE: ${{ matrix.service }}
+        run: |
+          python <<'PY'
+          from pathlib import Path
+          import os
+
+          blocks = {
+              "california-bitcoin": '''  // ── California Bitcoin ───────────────────────────────────────────────
+            {
+              id: "california-bitcoin",
+              name: "California Bitcoin",
+              url: "https://californiabitcoin.org",
+              serviceUrl: "https://californiabitcoin.org",
+              description:
+                "Source-backed Bitcoin research, claim verification, evidence packs, timelines, and deterministic grounding for AI agents.",
+              icon: "https://californiabitcoin.org/assets/favicon-512.png",
+              categories: ["blockchain", "data", "search"],
+              integration: "first-party",
+              tags: [
+                "bitcoin",
+                "research",
+                "verification",
+                "evidence",
+                "timelines",
+                "mcp",
+              ],
+              status: "active",
+              docs: {
+                homepage: "https://californiabitcoin.org/developers/",
+                llmsTxt: "https://californiabitcoin.org/llms.txt",
+                apiReference: "https://californiabitcoin.org/openapi.json",
+              },
+              provider: { name: "Davisville Labs LLC", url: "https://davisvillelabs.com" },
+              realm: "californiabitcoin.org",
+              intent: "charge",
+              payments: [STRIPE_PAYMENT],
+              endpoints: [
+                { route: "GET /api/agent/v1", desc: "Discover Agent Commerce capabilities and pricing" },
+                { route: "GET /api/agent/v1/search", desc: "Search canonical Bitcoin knowledge" },
+                { route: "GET /api/agent/v1/topic/:id", desc: "Retrieve one canonical Bitcoin knowledge topic" },
+                { route: "POST /api/agent/v1/answer", desc: "Answer a Bitcoin question deterministically" },
+                { route: "POST /api/agent/v1/verify-claim", desc: "Verify a Bitcoin claim against maintained source-backed knowledge", amount: "50", unitType: "request" },
+                { route: "POST /api/agent/v1/evidence-pack", desc: "Build a structured Bitcoin evidence pack", amount: "50", unitType: "request" },
+                { route: "POST /api/agent/v1/timeline", desc: "Build a query-specific sourced Bitcoin timeline", amount: "50", unitType: "request" },
+                { route: "POST /api/agent/v1/deep-ground", desc: "Build a deep deterministic Bitcoin grounding package", amount: "100", unitType: "request" },
+                { route: "POST /api/agent/v1/batch", desc: "Process up to 20 Bitcoin claims or questions", amount: "250", unitType: "request" },
+              ],
+            },
+
+          ''',
+              "filedproof": '''  // ── FiledProof ────────────────────────────────────────────────────────
+            {
+              id: "filedproof",
+              name: "FiledProof",
+              url: "https://filedproof.davisvillelabs.com",
+              serviceUrl: "https://filedproof.davisvillelabs.com",
+              description:
+                "Evidence-first SEC filing intelligence for AI agents, including financial-fact reconciliation and disclosure-change evidence from primary-source SEC filings.",
+              categories: ["data", "search"],
+              integration: "first-party",
+              tags: ["sec", "filings", "financial-data", "disclosures", "evidence", "mcp"],
+              status: "active",
+              docs: {
+                homepage: "https://filedproof.davisvillelabs.com/agents",
+                llmsTxt: "https://filedproof.davisvillelabs.com/llms.txt",
+                apiReference: "https://filedproof.davisvillelabs.com/openapi.json",
+              },
+              provider: { name: "Davisville Labs LLC", url: "https://davisvillelabs.com" },
+              realm: "filedproof.davisvillelabs.com",
+              intent: "charge",
+              payments: [STRIPE_PAYMENT],
+              endpoints: [
+                { route: "GET /v1/capabilities", desc: "Discover FiledProof capabilities and commerce metadata" },
+                { route: "POST /v1/research/financial-fact/preflight", desc: "Check whether a financial-fact reconciliation is eligible before payment" },
+                { route: "POST /v1/research/financial-fact", desc: "Reconcile one reported financial fact across supported SEC filings", amount: "100", unitType: "request" },
+                { route: "POST /v1/research/changes/:identifier", desc: "Prioritize new SEC disclosure changes with before/after evidence and provenance", amount: "1500", unitType: "request" },
+              ],
+            },
+
+          ''',
+              "filmrightsproof": '''  // ── FilmRightsProof ───────────────────────────────────────────────────
+            {
+              id: "filmrightsproof",
+              name: "FilmRightsProof",
+              url: "https://filmrightsproof.davisvillelabs.com",
+              serviceUrl: "https://filmrightsproof.davisvillelabs.com",
+              description:
+                "Public-record film and television rights-evidence research for AI agents using maintained U.S. Copyright Office records with provenance, ambiguity, and bounded freshness.",
+              categories: ["data", "media", "search"],
+              integration: "first-party",
+              tags: ["film", "television", "copyright", "rights", "evidence", "mcp"],
+              status: "active",
+              docs: {
+                homepage: "https://filmrightsproof.davisvillelabs.com/agents",
+                llmsTxt: "https://filmrightsproof.davisvillelabs.com/llms.txt",
+                apiReference: "https://filmrightsproof.davisvillelabs.com/openapi.json",
+              },
+              provider: { name: "Davisville Labs LLC", url: "https://davisvillelabs.com" },
+              realm: "filmrightsproof.davisvillelabs.com",
+              intent: "charge",
+              payments: [STRIPE_PAYMENT],
+              endpoints: [
+                { route: "GET /v1/capabilities", desc: "Discover FilmRightsProof capabilities, coverage, and commerce metadata" },
+                { route: "POST /v1/search", desc: "Search maintained public Copyright Office records" },
+                { route: "POST /v1/trace", desc: "Build a structured public-record film or television rights evidence dossier", amount: "200", unitType: "request" },
+              ],
+            },
+
+          ''',
+          }
+
+          ids = {
+              "california-bitcoin": 'id: "california-bitcoin"',
+              "filedproof": 'id: "filedproof"',
+              "filmrightsproof": 'id: "filmrightsproof"',
+          }
+
+          service = os.environ["SERVICE"]
+          path = Path("schemas/services.ts")
+          text = path.read_text()
+          needle = "export const services: ServiceDef[] = [\n"
+          if needle not in text:
+              raise SystemExit("service registry insertion point not found")
+          if ids[service] in text:
+              raise SystemExit(f"{service} already exists in current upstream main")
+          path.write_text(text.replace(needle, needle + blocks[service], 1))
+          PY
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Validate discovery generation
+        run: pnpm generate:discovery
+
+      - name: Validate types
+        run: pnpm check:types
+
+      - name: Validate production build
+        run: pnpm build
+
+      - name: Commit and push service branch
+        env:
+          BRANCH: ${{ matrix.branch }}
+          COMMIT_MESSAGE: ${{ matrix.commit_message }}
+        run: |
+          git config user.name "Blake — Davisville Labs"
+          git config user.email "hello@davisvillelabs.com"
+          git add schemas/services.ts
+          git commit --no-verify -m "$COMMIT_MESSAGE"
+          git push origin "HEAD:$BRANCH" --force
