@@ -122,6 +122,51 @@ export interface ServiceDef {
 
 // prettier-ignore
 export const services: ServiceDef[] = [
+  // ── AI Agent Analytics ────────────────────────────────────────────────
+  {
+    id: "ai-agent-analytics",
+    name: "AI Agent Analytics",
+    url: "https://analytics.davisvillelabs.com",
+    serviceUrl: "https://analytics.davisvillelabs.com",
+    description:
+      "Merchant-side analytics for measuring whether AI agents become customers across discovery, paid intent, settlement, delivery, and repeat use.",
+    categories: ["ai", "data"],
+    integration: "first-party",
+    tags: [
+      "agent-analytics",
+      "agent-commerce",
+      "mcp",
+      "revenue",
+      "settlement",
+      "merchant",
+    ],
+    status: "active",
+    docs: {
+      homepage: "https://analytics.davisvillelabs.com",
+      llmsTxt: "https://analytics.davisvillelabs.com/llms.txt",
+      apiReference: "https://analytics.davisvillelabs.com/openapi.json",
+    },
+    provider: {
+      name: "Davisville Labs",
+      url: "https://davisvillelabs.com",
+    },
+    realm: "analytics.davisvillelabs.com",
+    intent: "charge",
+    payments: [STRIPE_PAYMENT],
+    endpoints: [
+      {
+        route: "POST /api/agent/v1/founder-approval-intent",
+        desc: "Create a no-payment Founder purchase intent for explicit human approval",
+      },
+      {
+        route: "POST /api/agent/v1/founder-access",
+        desc: "Purchase one prepaid Founder month after signed human approval",
+        amount: "1200",
+        unitType: "prepaid month",
+      },
+    ],
+  },
+
   // ── Apex DB ───────────────────────────────────────────────────────────
   {
     id: "apex-db",
